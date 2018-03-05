@@ -2,6 +2,7 @@ defmodule Platform.Accounts.Player do
   use Ecto.Schema
   import Ecto.Changeset
   alias Platform.Accounts.Player
+  alias Platform.Products.{Game, Gameplay}
 
   schema "players" do
     field(:display_name, :string)
@@ -9,6 +10,8 @@ defmodule Platform.Accounts.Player do
     field(:password_digest, :string)
     field(:score, :integer, default: 0)
     field(:username, :string, unique: true)
+
+    many_to_many(:games, Game, join_through: Gameplay)
 
     timestamps()
   end
