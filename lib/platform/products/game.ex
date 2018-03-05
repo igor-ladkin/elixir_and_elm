@@ -9,6 +9,7 @@ defmodule Platform.Products.Game do
     field(:featured, :boolean, default: false)
     field(:thumbnail, :string)
     field(:title, :string)
+    field(:slug, :string, unique: true)
 
     many_to_many(:players, Player, join_through: Gameplay)
 
@@ -18,7 +19,8 @@ defmodule Platform.Products.Game do
   @doc false
   def changeset(game, attrs) do
     game
-    |> cast(attrs, [:description, :featured, :thumbnail, :title])
-    |> validate_required([:description, :featured, :thumbnail, :title])
+    |> cast(attrs, [:description, :featured, :thumbnail, :title, :slug])
+    |> validate_required([:description, :featured, :thumbnail, :title, :slug])
+    |> unique_constraint(:slug)
   end
 end

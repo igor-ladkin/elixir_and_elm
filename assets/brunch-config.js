@@ -31,8 +31,9 @@ exports.config = {
     },
 
     elmBrunch: {
-      mainModules: ["elm/Main.elm"],
+      mainModules: ["elm/Main.elm", "elm/Platformer.elm"],
       makeParameters: ["--debug"],
+      outputFile: "elm.js",
       outputFolder: "../assets/js"
     }
   },
