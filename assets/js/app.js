@@ -25,4 +25,4 @@ const elmContrainer = document.querySelector("#elm-container")
 if (elmContrainer) Elm.Main.embed(elmContrainer)
 
 const platformerContainer = document.querySelector("#platformer")
-if (platformerContainer) Elm.Platformer.embed(platformerContainer)
+if (platformerContainer) Elm.Platformer.embed(platformerContainer, { token: window.userToken })
