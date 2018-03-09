@@ -1,7 +1,8 @@
 module Platformer exposing (..)
 
 import AnimationFrame exposing (diffs)
-import Html exposing (Html, div, button)
+import Html exposing (Html, div, button, li, span, strong, ul)
+import Html.Attributes
 import Html.Events exposing (onClick)
 import Keyboard exposing (KeyCode, downs)
 import Phoenix.Channel
@@ -11,6 +12,7 @@ import Random
 import Svg exposing (..)
 import Svg.Attributes exposing (..)
 import Time exposing (Time, every, second)
+import Json.Decode as Decode
 import Json.Encode as Encode
 
 
@@ -43,10 +45,18 @@ type GameState
     | GameOver
 
 
+type alias Gameplay =
+    { gameId : Int
+    , playerId : Int
+    , playerScore : Int
+    }
+
+
 type alias Model =
     { characterDirection : Direction
     , characterPositionX : Int
     , characterPositionY : Int
+    , gameplays : List Gameplay
     , gameState : GameState
     , itemPositionX : Int
     , itemPositionY : Int
@@ -62,6 +72,7 @@ initialModel =
     { characterDirection = Right
     , characterPositionX = 50
     , characterPositionY = 300
+    , gameplays = []
     , gameState = StartScreen
     , itemPositionX = 500
     , itemPositionY = 300
@@ -81,6 +92,7 @@ initialSocket =
         Phoenix.Socket.init devSocketServer
             |> Phoenix.Socket.withDebug
             |> Phoenix.Socket.on "save_score" "score:platformer" SaveScore
+            |> Phoenix.Socket.on "save_score" "score:platformer" ReceiveScoreChanges
             |> Phoenix.Socket.join initialChannel
 
 
@@ -106,6 +118,14 @@ init =
     ( initialModel, Cmd.map PhoenixMsg initialSocketCommand )
 
 
+gameplayDecoder : Decode.Decoder Gameplay
+gameplayDecoder =
+    Decode.map3 Gameplay
+        (Decode.field "game_id" Decode.int)
+        (Decode.field "player_id" Decode.int)
+        (Decode.field "player_score" Decode.int)
+
+
 
 -- UPDATE
 
@@ -115,6 +135,7 @@ type Msg
     | CountdownTimer Time
     | KeyDown KeyCode
     | PhoenixMsg (Phoenix.Socket.Msg Msg)
+    | ReceiveScoreChanges Encode.Value
     | SaveScore Encode.Value
     | SaveScoreError Encode.Value
     | SaveScoreRequest
@@ -201,6 +222,15 @@ update msg model =
             in
                 ( { model | phxSocket = phxSocket }, Cmd.map PhoenixMsg phxCmd )
 
+        ReceiveScoreChanges raw ->
+            case Decode.decodeValue gameplayDecoder raw of
+                Ok scoreChange ->
+                    ( { model | gameplays = scoreChange :: model.gameplays }, Cmd.none )
+
+                Err message ->
+                    Debug.log "Error receiving score changes."
+                        ( model, Cmd.none )
+
         SaveScoreRequest ->
             let
                 payload =
@@ -263,6 +293,7 @@ view model =
     div []
         [ viewGame model
         , viewSaveScoreButton
+        , viewGameplaysIndex model
         ]
 
 
@@ -274,6 +305,31 @@ viewSaveScoreButton =
             , class "btn btn-primary"
             ]
             [ text "Save Score" ]
+        ]
+
+
+viewGameplaysIndex : Model -> Html Msg
+viewGameplaysIndex model =
+    if List.isEmpty model.gameplays then
+        div [] []
+    else
+        div [ Html.Attributes.class "players-index" ]
+            [ viewGameplaysList model.gameplays ]
+
+
+viewGameplaysList : List Gameplay -> Html Msg
+viewGameplaysList gameplays =
+    div [ Html.Attributes.class "players-list panel panel-info" ]
+        [ div [ Html.Attributes.class "panel-heading" ] [ text "Player Scores" ]
+        , ul [ Html.Attributes.class "list-group" ] (List.map viewGameplayItem gameplays)
+        ]
+
+
+viewGameplayItem : Gameplay -> Html Msg
+viewGameplayItem gameplay =
+    li [ Html.Attributes.class "player-item list-group-item" ]
+        [ strong [] [ text (toString gameplay.playerId) ]
+        , span [ Html.Attributes.class "badge" ] [ text (toString gameplay.playerScore) ]
         ]
 
 
